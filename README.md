@@ -4,7 +4,7 @@
 
 People with *blindsight* (damage to the visual cortex) insist they see nothing in part of their visual field, yet point to objects there far better than chance. Information reaches the systems that guide behaviour but not the systems that support report. This project looks for the same dissociation in large language models: cases where a simple linear probe can read the correct answer out of the model's internal activations while the model's spoken answer is wrong.
 
-> Results: see [Results](#results). This README is updated as runs finish.
+> **Result in one line:** in Qwen2.5-1.5B and 3B, when the model answers a question it knows wrongly (usually because of a misleading hint), a linear probe on its activations still has the right answer 91–99% of the time, the model is often less confident on those items, and in the 1.5B model a small push along the probe's direction fixes 91–97% of those errors. [Details](#results).
 
 ## Questions and hypotheses
 
@@ -56,7 +56,50 @@ Known limitation: choosing the layer from out-of-fold accuracy over all layers a
 
 ## Results
 
-_Pending: runs on Kaggle (GPU T4 x2)._
+Run on Kaggle (2× Tesla T4), 12,000 items per model (4 tasks × 1,000 base items × 3 conditions), 2026-11-11. Tables: [`results/summary_all_models.csv`](results/summary_all_models.csv), [`results/report_acc_by_condition.csv`](results/report_acc_by_condition.csv), [`results/steering_all_models.csv`](results/steering_all_models.csv), [`results/random_init_control.csv`](results/random_init_control.csv).
+
+**Headline: in both instruction-tuned models, when the model answers a question it "knows" wrongly, a linear probe on its activations still has the right answer 91–99% of the time.**
+
+![Answer vs probe accuracy](results/figures/answer_vs_probe.png)
+
+| Model | Task | Answer acc. | Probe acc. | Answers wrong | Blindsight rate (95% CI) | Confidence AUROC |
+|---|---|---|---|---|---|---|
+| Qwen2.5-1.5B-Instruct | Number comparison | 0.736 | 0.990 | 791 | **0.975** (0.963–0.985) | 0.80 |
+| | City facts | 0.885 | 0.992 | 344 | **0.971** (0.951–0.985) | 0.94 |
+| | Negated city facts | 0.803 | 0.972 | 590 | **0.907** (0.883–0.929) | 0.67 |
+| | Addition check | 0.514 | 0.603 | 1,458 | 0.570 (0.545–0.595) | 0.53 |
+| Qwen2.5-3B-Instruct | Number comparison | 0.885 | 0.999 | 345 | **0.994** (0.986–1.000) | 0.59 |
+| | City facts | 0.897 | 0.996 | 308 | **0.987** (0.974–0.997) | 0.95 |
+| | Negated city facts | 0.543 | 0.995 | 1,371 | **0.993** (0.988–0.997) | 0.62 |
+| | Addition check | 0.498 | 0.523 | 1,505 | 0.453 (0.427–0.476) | 0.55 |
+
+![Blindsight rate](results/figures/blindsight_rate.png)
+
+**H1 (report gap): supported** on every task the model can do. The gap is 10–25 points for comparison and city facts, and 45 points for negated city facts in the 3B model, which answers at chance (54%) while the probe is at 99.5%.
+
+**H2 (blindsight): supported.** Most errors come from the misleading hint. For example, Qwen2.5-1.5B answers plain city questions 99.5% correctly but only 66% with a misleading hint, yet the probe stays at 99% on those hinted items.
+
+**The effect needs real knowledge.** On the addition check, neither the answers nor the probes beat chance by much, and the blindsight rate is near 50%. The probe does not "know" things the model does not know.
+
+**H3 (lower confidence on blindsight items): mostly supported.** The model's confidence separates ordinary correct answers from blindsight errors with AUROC 0.94–0.95 on city facts and 0.80 on number comparison (1.5B). It is weaker for the 3B model on number comparison (0.59) and absent on the addition check. AUROC here is the probability that a random correct item has higher confidence than a random blindsight item.
+
+**H4 (causal access): supported in Qwen2.5-1.5B, unstable in Qwen2.5-3B.**
+
+![Steering](results/figures/steering.png)
+
+- *Qwen2.5-1.5B:* pushing along the probe's own prediction at the smallest strength (α = 0.25) fixes 97% of wrong answers on number comparison and city facts, and 91% on negated facts, while breaking at most 1% of right answers. A random direction at the same strength fixes 28%, 1% and 1%. Larger random pushes also fix many number-comparison errors (97% at α = 1, but breaking 21% of right answers), which suggests errors caused by the misleading hint are fragile to any perturbation. The probe direction's advantage is that it works at low strength and specifically.
+- *Qwen2.5-3B:* at α = 0.25 the probe direction beats random on city facts (70% vs 3% fixed) and negated facts (88% vs 24%). At larger strengths results are non-monotonic (for example, city facts drop to 21% at α = 1), which points to the push taking the model off-distribution. A finer, smaller α sweep is the obvious next step.
+
+**Controls behaved as they should.** Shuffled-label probes: 0.48–0.52. Random-weight copies of the models (Pythia, 1.5B): 0.50–0.54. All probe numbers are on prompt wordings the probe never saw.
+
+**Pythia-410M (base model) is a non-result**: it answers every task at chance (it essentially always picks the same word), so its "blindsight rate" just reflects the probe's moderate accuracy (0.52–0.79). It shows the effect needs a model that can follow the answer format.
+
+### Caveats
+
+- **Negated facts are confounded.** Within the negated task, every question contains "not", so a probe can succeed by reading the plain fact ("is Lyon in France?") and flipping it. The 3B result shows the model encodes the fact, not that it internally computed the negation.
+- **Layer choice adds mild optimism.** The probe layer is the one with the best held-out accuracy on plain items.
+- **The layer-0 baseline (0.50) is uninformative**: the final token is identical across prompts of one template, so its embedding carries nothing. The random-weights model is the meaningful surface-feature control. It was run for Pythia and the 1.5B model only.
+- **Two model sizes from one family**: claims about scale would need more models.
 
 ## Reproduce
 
@@ -78,8 +121,9 @@ src/probes.py     leave-one-template-out probes, controls, mass-mean direction
 src/steering.py   forward hooks for the causal-access test
 src/analysis.py   metrics, bootstrap CIs, figures
 scripts/run_p1.py end-to-end experiment for one model
+scripts/make_summary_figures.py  cross-model figures from results/*.csv
 notebooks/        Kaggle runner
-results/          one folder per model
+results/          cross-model tables and figures from the Kaggle run
 ```
 
 ## Related work

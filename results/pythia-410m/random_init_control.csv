@@ -1,0 +1,5 @@
+task,layer,random_init_probe_acc
+number_compare,12,0.5446666666666666
+addition_check,11,0.49666666666666665
+city_country,10,0.5246666666666666
+negated_city,20,0.5146666666666667

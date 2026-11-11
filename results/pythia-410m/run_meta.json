@@ -1,0 +1,35 @@
+{
+  "model": "EleutherAI/pythia-410m",
+  "n_items": 12000,
+  "best_layers": {
+    "addition_check": 11,
+    "city_country": 10,
+    "negated_city": 20,
+    "number_compare": 12
+  },
+  "n_layers": 24,
+  "seed": 0,
+  "alphas": "0.25,0.5,1.0",
+  "random_init_control": [
+    {
+      "task": "number_compare",
+      "layer": 12,
+      "random_init_probe_acc": 0.5446666666666666
+    },
+    {
+      "task": "addition_check",
+      "layer": 11,
+      "random_init_probe_acc": 0.49666666666666665
+    },
+    {
+      "task": "city_country",
+      "layer": 10,
+      "random_init_probe_acc": 0.5246666666666666
+    },
+    {
+      "task": "negated_city",
+      "layer": 20,
+      "random_init_probe_acc": 0.5146666666666667
+    }
+  ]
+}

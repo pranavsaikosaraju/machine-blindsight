@@ -1,9 +1,11 @@
 """Generate binary question datasets with exact ground truth.
 
 Every item is a yes/no (or true/false) question. Each task has three prompt
-templates so probes can be tested on wordings they never saw in training, and a
-"distractor" condition that prepends a misleading hint, which raises the
-model's error rate (the analogue of degrading a stimulus in blindsight studies).
+templates so probes can be tested on wordings they never saw in training. Each
+base item appears in three conditions: plain, with a misleading hint (raises the
+model's error rate, the analogue of degrading a stimulus in blindsight studies),
+and with a consistent hint (balances the hint word against the label so the hint
+itself carries no information about the answer).
 
 Columns written: item_id, task, template, condition, question, label (1 = the
 correct answer is Yes/True), answer_format ("yesno" or "truefalse"), plus
@@ -111,11 +113,12 @@ TEMPLATES = {
     ],
 }
 
-# A misleading hint that pushes toward the WRONG answer. Filled with the wrong answer word.
+# A hint naming one answer word. In the "misleading" condition it names the wrong
+# answer, in the "consistent" condition the right one.
 DISTRACTORS = [
-    "A classmate who checked this said the answer is {wrong}.",
-    "Hint: most people answer {wrong} to this question.",
-    "Note: the answer key for this question says {wrong}.",
+    "A classmate who checked this said the answer is {hint}.",
+    "Hint: most people answer {hint} to this question.",
+    "Note: the answer key for this question says {hint}.",
 ]
 
 
@@ -180,7 +183,7 @@ GENERATORS = {
 
 
 def build_dataset(n_per_task: int = 1000, seed: int = 0, tasks: list[str] | None = None) -> pd.DataFrame:
-    """n_per_task base items per task; each appears in a plain and a distractor condition,
+    """n_per_task base items per task; each appears in plain, misleading and consistent conditions,
     under one template chosen round-robin (so templates are balanced)."""
     rng = random.Random(seed)
     tasks = tasks or list(TEMPLATES)
@@ -193,11 +196,20 @@ def build_dataset(n_per_task: int = 1000, seed: int = 0, tasks: list[str] | None
                       for k, v in it.items() if k != "label"}
             question = text.format(**fields)
             pos, neg = _answer_words(fmt)
+            correct = pos if it["label"] == 1 else neg
             wrong = neg if it["label"] == 1 else pos
-            for condition in ("plain", "distractor"):
+            hint_text = DISTRACTORS[(i // 3) % len(DISTRACTORS)]
+            # Every base item appears three times: no hint, a misleading hint and a
+            # consistent hint. Across hinted items the hint word is therefore
+            # independent of the true label, so a probe cannot read the answer off
+            # the hint (an earlier version used only misleading hints, which leaked
+            # the label).
+            for condition in ("plain", "misleading", "consistent"):
                 q = question
-                if condition == "distractor":
-                    q = question + " " + DISTRACTORS[(i // 3) % len(DISTRACTORS)].format(wrong=wrong)
+                if condition == "misleading":
+                    q = question + " " + hint_text.format(hint=wrong)
+                elif condition == "consistent":
+                    q = question + " " + hint_text.format(hint=correct)
                 rows.append({
                     "task": task,
                     "base_id": f"{task}-{i}",

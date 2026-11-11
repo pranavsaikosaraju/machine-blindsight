@@ -111,20 +111,25 @@ def fig_layers(layer_df, summary, out, model_name):
     axes = np.atleast_1d(axes)
     for ax, task in zip(axes, tasks):
         d = layer_df[layer_df.task == task]
-        ax.plot(d.layer, d.probe_acc_plain, color=SERIES[0], lw=2, label="Probe, plain")
-        ax.plot(d.layer, d.probe_acc_distractor, color=SERIES[1], lw=2, label="Probe, distractor")
+        conds = (("plain", SERIES[0], "no hint"), ("misleading", SERIES[1], "misleading hint"),
+                 ("consistent", SERIES[2], "consistent hint"))
+        for cond, c, name in conds:
+            col = f"probe_acc_{cond}"
+            if col not in d:
+                continue
+            ax.plot(d.layer, d[col], color=c, lw=2, label=f"Probe, {name}")
+            r = summary[(summary.task == task) & (summary.condition == cond)].report_acc
+            if len(r):
+                ax.axhline(r.iloc[0], color=c, lw=1.2, ls="--")
         if "control_shuffled_acc" in d:
             ax.plot(d.layer, d.control_shuffled_acc, color=MUTED, lw=1.2, ls=":", label="Shuffled-label control")
-        for cond, c in (("plain", SERIES[0]), ("distractor", SERIES[1])):
-            r = summary[(summary.task == task) & (summary.condition == cond)].report_acc.iloc[0]
-            ax.axhline(r, color=c, lw=1.2, ls="--")
         ax.set_title(task.replace("_", " "), fontsize=10, color=INK)
         ax.set_xlabel("Layer", fontsize=9, color=MUTED)
-        ax.set_ylim(0.3, 1.02)
+        ax.set_ylim(0.0, 1.02)
         _style(ax)
     axes[0].set_ylabel("Accuracy (dashed = model's answer)", fontsize=9, color=MUTED)
     handles, labels = axes[-1].get_legend_handles_labels()
-    fig.legend(handles, labels, fontsize=8, frameon=False, loc="lower center", ncol=3)
+    fig.legend(handles, labels, fontsize=8, frameon=False, loc="lower center", ncol=4)
     fig.suptitle(f"Probe accuracy by layer vs. the model's own answers ({model_name})", fontsize=11, color=INK)
     fig.tight_layout(rect=(0, 0.08, 1, 1))
     fig.savefig(out, dpi=160)

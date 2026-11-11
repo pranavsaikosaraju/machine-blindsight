@@ -80,7 +80,7 @@ def probe_all_layers(acts: np.ndarray, df: pd.DataFrame, C: float = 0.05, seed: 
 
     Returns
     -------
-    layer_df : one row per (task, layer) with accuracy on all / plain / distractor items,
+    layer_df : one row per (task, layer) with accuracy on all items and per condition,
                and the shuffled-label control accuracy.
     oof      : {task: array [n_task_items, n_layers] of out-of-fold probe scores}
     """
@@ -100,12 +100,9 @@ def probe_all_layers(acts: np.ndarray, df: pd.DataFrame, C: float = 0.05, seed: 
             s = oof_scores(X, y, groups, C=C, seed=seed)
             task_scores[:, L] = s
             pred = (s > 0).astype(int)
-            row = {
-                "task": task, "layer": L,
-                "probe_acc": (pred == y).mean(),
-                "probe_acc_plain": (pred == y)[cond == "plain"].mean(),
-                "probe_acc_distractor": (pred == y)[cond == "distractor"].mean(),
-            }
+            row = {"task": task, "layer": L, "probe_acc": (pred == y).mean()}
+            for c in np.unique(cond):
+                row[f"probe_acc_{c}"] = (pred == y)[cond == c].mean()
             if shuffled_control:
                 s_ctrl = oof_scores(X, y_shuf, groups, C=C, seed=seed)
                 row["control_shuffled_acc"] = ((s_ctrl > 0).astype(int) == y_shuf).mean()

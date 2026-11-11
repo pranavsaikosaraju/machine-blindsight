@@ -1,0 +1,14 @@
+{
+  "model": "Qwen/Qwen2.5-3B-Instruct",
+  "n_items": 12000,
+  "best_layers": {
+    "addition_check": 29,
+    "city_country": 22,
+    "negated_city": 24,
+    "number_compare": 25
+  },
+  "n_layers": 36,
+  "seed": 0,
+  "alphas": "0.25,0.5,1.0",
+  "random_init_control": []
+}

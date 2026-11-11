@@ -25,13 +25,52 @@ def _fit_predict(X_tr, y_tr, X_te, C=0.05, seed=0):
     return clf.decision_function(sc.transform(X_te))
 
 
+def _fit_predict_torch(X_tr, y_tr, X_te, C=0.05, max_iter=200):
+    """Same objective as sklearn's L2 logistic regression
+    (C * sum of log-losses + 0.5 * ||w||^2), solved with L-BFGS on the GPU."""
+    import torch
+    dev = "cuda" if torch.cuda.is_available() else "cpu"
+    Xtr = torch.as_tensor(X_tr, dtype=torch.float32, device=dev)
+    Xte = torch.as_tensor(X_te, dtype=torch.float32, device=dev)
+    ytr = torch.as_tensor(y_tr, dtype=torch.float32, device=dev)
+    mu, sd = Xtr.mean(0), Xtr.std(0).clamp_min(1e-6)
+    Xtr, Xte = (Xtr - mu) / sd, (Xte - mu) / sd
+    n, d = Xtr.shape
+    w = torch.zeros(d, device=dev, requires_grad=True)
+    b = torch.zeros(1, device=dev, requires_grad=True)
+    opt = torch.optim.LBFGS([w, b], lr=1.0, max_iter=max_iter, line_search_fn="strong_wolfe",
+                            tolerance_grad=1e-6, tolerance_change=1e-9)
+    lam = 1.0 / (2.0 * C * n)
+
+    def closure():
+        opt.zero_grad()
+        z = Xtr @ w + b
+        loss = torch.nn.functional.binary_cross_entropy_with_logits(z, ytr) + lam * (w * w).sum()
+        loss.backward()
+        return loss
+
+    opt.step(closure)
+    with torch.no_grad():
+        return (Xte @ w + b).float().cpu().numpy()
+
+
+def _use_torch():
+    try:
+        import torch
+        return torch.cuda.is_available()
+    except ImportError:
+        return False
+
+
 def oof_scores(X: np.ndarray, y: np.ndarray, groups: np.ndarray, C: float = 0.05,
                seed: int = 0) -> np.ndarray:
-    """Out-of-fold decision scores, holding out one group (template) at a time."""
+    """Out-of-fold decision scores, holding out one group (template) at a time.
+    Uses the GPU when available, otherwise scikit-learn on CPU."""
     scores = np.zeros(len(y), dtype=np.float32)
+    fit = _fit_predict_torch if _use_torch() else _fit_predict
     for g in np.unique(groups):
         te = groups == g
-        scores[te] = _fit_predict(X[~te], y[~te], X[te], C=C, seed=seed)
+        scores[te] = fit(X[~te], y[~te], X[te], C=C)
     return scores
 
 
@@ -55,8 +94,9 @@ def probe_all_layers(acts: np.ndarray, df: pd.DataFrame, C: float = 0.05, seed: 
         n_layers = acts.shape[1]
         task_scores = np.zeros((len(idx), n_layers), dtype=np.float32)
         y_shuf = rng.permutation(y)
+        print(f"  probing {task}: {n_layers} layers", flush=True)
         for L in range(n_layers):
-            X = acts[idx, L, :].astype(np.float32)
+            X = np.nan_to_num(acts[idx, L, :].astype(np.float32), posinf=0.0, neginf=0.0)
             s = oof_scores(X, y, groups, C=C, seed=seed)
             task_scores[:, L] = s
             pred = (s > 0).astype(int)

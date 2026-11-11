@@ -99,14 +99,14 @@ def run_items(lm: LoadedModel, df, batch_size: int = 16, layers: list[int] | Non
               hook_fn=None, cache: bool = True, progress: bool = True):
     """Run every row of df. Returns (report_df_columns dict, activations array or None).
 
-    activations: float16 array [n_items, n_layers+1, d_model] at the final prompt token.
+    activations: float32 array [n_items, n_layers+1, d_model] at the final prompt token.
     hook_fn: optional callable(start_idx, end_idx) -> context manager, used by steering.
     """
     n = len(df)
     n_hidden = lm.model.config.num_hidden_layers + 1
     d = lm.model.config.hidden_size
     layers = layers if layers is not None else list(range(n_hidden))
-    acts = np.zeros((n, len(layers), d), dtype=np.float16) if cache else None
+    acts = np.zeros((n, len(layers), d), dtype=np.float32) if cache else None
     logit_pos = np.zeros(n, dtype=np.float32)
     logit_neg = np.zeros(n, dtype=np.float32)
     prompts = [build_prompt(lm, q, f) for q, f in zip(df.question, df.answer_format)]
@@ -134,7 +134,7 @@ def run_items(lm: LoadedModel, df, batch_size: int = 16, layers: list[int] | Non
             logit_neg[s + j] = _logsumexp(last[j:j + 1], n_ids).item()
         if cache:
             hs = torch.stack([out.hidden_states[L][:, -1, :] for L in layers], dim=1)
-            acts[s:e] = hs.to(torch.float16).cpu().numpy()
+            acts[s:e] = hs.float().cpu().numpy()
         del out
     margin = logit_pos - logit_neg  # >0 means the model says Yes/True
     p_pos = 1.0 / (1.0 + np.exp(-margin))

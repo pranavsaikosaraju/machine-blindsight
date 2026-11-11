@@ -92,7 +92,7 @@ def main():
         rng = np.random.default_rng(args.seed)
         for task, sub in df.groupby("task", sort=False):
             L = best[task]
-            X = acts[sub.index.to_numpy(), L, :]
+            X = np.nan_to_num(acts[sub.index.to_numpy(), L, :].astype(np.float32), posinf=0.0, neginf=0.0)
             direction = probes.mass_mean_direction(X, sub.label.to_numpy())
             mean_norm = float(np.linalg.norm(X.astype(np.float32), axis=1).mean())
             wrong = sub[sub.report_correct == 0]

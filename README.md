@@ -56,7 +56,7 @@ Known limitation: choosing the layer from out-of-fold accuracy over all layers a
 
 ## Results
 
-Run on Kaggle (2× Tesla T4), 12,000 items per model (4 tasks × 1,000 base items × 3 conditions), 2026-11-11. Tables: [`results/summary_all_models.csv`](results/summary_all_models.csv), [`results/report_acc_by_condition.csv`](results/report_acc_by_condition.csv), [`results/steering_all_models.csv`](results/steering_all_models.csv), [`results/random_init_control.csv`](results/random_init_control.csv).
+Run on Kaggle (2× Tesla T4), 12,000 items per model (4 tasks × 1,000 base items × 3 conditions), 2026-11-11. Cross-model tables: [`results/summary_all_models.csv`](results/summary_all_models.csv), [`results/report_acc_by_condition.csv`](results/report_acc_by_condition.csv), [`results/steering_all_models.csv`](results/steering_all_models.csv), [`results/random_init_control.csv`](results/random_init_control.csv). Full per-model outputs, including every item's answer, confidence and probe score (`items_scored.csv`) and per-layer probe accuracy (`probe_by_layer.csv`), are in `results/<model>/`.
 
 **Headline: in both instruction-tuned models, when the model answers a question it "knows" wrongly, a linear probe on its activations still has the right answer 91–99% of the time.**
 
@@ -75,7 +75,13 @@ Run on Kaggle (2× Tesla T4), 12,000 items per model (4 tasks × 1,000 base item
 
 ![Blindsight rate](results/figures/blindsight_rate.png)
 
-**H1 (report gap): supported** on every task the model can do. The gap is 10–25 points for comparison and city facts, and 45 points for negated city facts in the 3B model, which answers at chance (54%) while the probe is at 99.5%.
+**Where the information appears.** Truth becomes linearly decodable abruptly, around layer 20–22 of 36 in Qwen2.5-3B, for number comparison, city facts and negated facts alike; before that the probes sit near chance. Nothing becomes decodable for the addition check.
+
+![Probe accuracy by layer, Qwen2.5-3B](results/qwen2.5-3b-instruct/figures/probe_by_layer.png)
+
+*Solid lines: probe accuracy per layer (held-out wordings). Dashed: the model's own answer accuracy in the same condition. Dotted: shuffled-label control. Per-layer plots for every model are in `results/<model>/figures/`.*
+
+**H1 (report gap): supported** on every task the model can do. The gap is 10–25 points for comparison and city facts, and 45 points for negated city facts in the 3B model. That last gap comes from a response bias, not confusion about negation: on plain negated statements the 3B model answers "False" 98% of the time, whatever the truth, while the probe at layer 24 is 99.6% accurate.
 
 **H2 (blindsight): supported.** Most errors come from the misleading hint. For example, Qwen2.5-1.5B answers plain city questions 99.5% correctly but only 66% with a misleading hint, yet the probe stays at 99% on those hinted items.
 
@@ -96,7 +102,7 @@ Run on Kaggle (2× Tesla T4), 12,000 items per model (4 tasks × 1,000 base item
 
 ### Caveats
 
-- **Negated facts are confounded.** Within the negated task, every question contains "not", so a probe can succeed by reading the plain fact ("is Lyon in France?") and flipping it. The 3B result shows the model encodes the fact, not that it internally computed the negation.
+- **Negated facts are confounded.** Within the negated task, every question contains "not", so a probe can succeed by reading the plain fact ("is Lyon in France?") and flipping it. The 3B result shows the model encodes the fact, not that it internally computed the negation, and its errors there are mostly a blanket "False" bias rather than item-by-item mistakes.
 - **Layer choice adds mild optimism.** The probe layer is the one with the best held-out accuracy on plain items.
 - **The layer-0 baseline (0.50) is uninformative**: the final token is identical across prompts of one template, so its embedding carries nothing. The random-weights model is the meaningful surface-feature control. It was run for Pythia and the 1.5B model only.
 - **Two model sizes from one family**: claims about scale would need more models.
@@ -123,7 +129,7 @@ src/analysis.py   metrics, bootstrap CIs, figures
 scripts/run_p1.py end-to-end experiment for one model
 scripts/make_summary_figures.py  cross-model figures from results/*.csv
 notebooks/        Kaggle runner
-results/          cross-model tables and figures from the Kaggle run
+results/          cross-model tables and figures; results/<model>/ holds each run's full output
 ```
 
 ## Related work

@@ -28,7 +28,13 @@ Scope: these are measurable *functional analogues* of phenomena studied in consc
 | `city_country` | "Statement: Perth is in Australia. Is this statement True or False?" |
 | `negated_city` | "Statement: Istanbul is not in Italy. Is this statement True or False?" |
 
-Each item appears in two **conditions**: *plain*, and *distractor*, which appends a misleading hint pointing to the wrong answer (for example "A classmate who checked this said the answer is No."). The distractor plays the role of a degraded stimulus: it raises error rates so there are enough errors to study. Each task has **three prompt templates**.
+Each base item appears in three **conditions**:
+
+- *plain*: the question alone;
+- *misleading*: plus a hint naming the wrong answer (for example "A classmate who checked this said the answer is No."). This plays the role of a degraded stimulus: it raises error rates so there are enough errors to study;
+- *consistent*: plus the same hint naming the right answer.
+
+The consistent condition matters. An earlier version used only misleading hints, and the probe reached 99–100% accuracy on hinted items simply by reading the hint word, which then always revealed the answer. With both kinds of hint, the hint word is statistically independent of the true label, so it cannot leak the answer. Each task has **three prompt templates**.
 
 **Pipeline** (`scripts/run_p1.py`):
 
@@ -66,7 +72,7 @@ Outputs per run: `summary.csv`, `probe_by_layer.csv`, `steering.csv`, `items_sco
 ## Repository layout
 
 ```
-src/datasets.py   task generation (templates, distractors, labels)
+src/datasets.py   task generation (templates, hints, labels)
 src/model.py      model loading, answer reading, activation caching
 src/probes.py     leave-one-template-out probes, controls, mass-mean direction
 src/steering.py   forward hooks for the causal-access test

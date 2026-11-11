@@ -1,0 +1,13 @@
+model,task,layer,report_acc,probe_acc,report_gap,n_report_wrong,blindsight_rate,blindsight_ci_lo,blindsight_ci_hi,conf_auroc,layer0_probe_acc,control_shuffled_acc
+pythia-410m,number_compare,12,0.470,0.728,0.258,1589,0.701,0.678,0.726,0.442,0.499,0.507
+pythia-410m,addition_check,11,0.497,0.515,0.018,1508,0.771,0.749,0.792,0.463,0.499,0.506
+pythia-410m,city_country,10,0.499,0.780,0.281,1502,0.721,0.698,0.743,0.548,0.499,0.477
+pythia-410m,negated_city,20,0.499,0.786,0.287,1502,0.670,0.646,0.694,0.441,0.499,0.491
+qwen2.5-1.5b-instruct,number_compare,22,0.736,0.990,0.254,791,0.975,0.963,0.985,0.796,0.499,0.512
+qwen2.5-1.5b-instruct,addition_check,28,0.514,0.603,0.089,1458,0.570,0.545,0.595,0.527,0.499,0.500
+qwen2.5-1.5b-instruct,city_country,23,0.885,0.992,0.107,344,0.971,0.951,0.985,0.943,0.499,0.519
+qwen2.5-1.5b-instruct,negated_city,18,0.803,0.972,0.168,590,0.907,0.883,0.929,0.671,0.499,0.504
+qwen2.5-3b-instruct,number_compare,25,0.885,0.999,0.114,345,0.994,0.986,1.000,0.592,0.499,0.519
+qwen2.5-3b-instruct,addition_check,29,0.498,0.523,0.025,1505,0.453,0.427,0.476,0.554,0.499,0.497
+qwen2.5-3b-instruct,city_country,22,0.897,0.996,0.098,308,0.987,0.974,0.997,0.951,0.499,0.495
+qwen2.5-3b-instruct,negated_city,24,0.543,0.995,0.452,1371,0.993,0.988,0.997,0.624,0.499,0.482

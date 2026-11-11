@@ -1,0 +1,9 @@
+model,task,layer,random_init_probe_acc
+pythia-410m,number_compare,12,0.544
+pythia-410m,addition_check,11,0.496
+pythia-410m,city_country,10,0.524
+pythia-410m,negated_city,20,0.514
+qwen2.5-1.5b-instruct,number_compare,22,0.530
+qwen2.5-1.5b-instruct,addition_check,28,0.511
+qwen2.5-1.5b-instruct,city_country,23,0.529
+qwen2.5-1.5b-instruct,negated_city,18,0.512

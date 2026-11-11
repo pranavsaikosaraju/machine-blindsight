@@ -1,0 +1,35 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "n_items": 12000,
+  "best_layers": {
+    "addition_check": 28,
+    "city_country": 23,
+    "negated_city": 18,
+    "number_compare": 22
+  },
+  "n_layers": 28,
+  "seed": 0,
+  "alphas": "0.25,0.5,1.0",
+  "random_init_control": [
+    {
+      "task": "number_compare",
+      "layer": 22,
+      "random_init_probe_acc": 0.5306666666666666
+    },
+    {
+      "task": "addition_check",
+      "layer": 28,
+      "random_init_probe_acc": 0.511
+    },
+    {
+      "task": "city_country",
+      "layer": 23,
+      "random_init_probe_acc": 0.5296666666666666
+    },
+    {
+      "task": "negated_city",
+      "layer": 18,
+      "random_init_probe_acc": 0.512
+    }
+  ]
+}
